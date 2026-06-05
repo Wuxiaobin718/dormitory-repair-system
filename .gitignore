@@ -1,0 +1,35 @@
+# Java
+backend/target/
+*.class
+*.jar
+*.war
+*.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.cache
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+*.local
+
+# Project documents (not for GitHub)
+CLAUDE.md
+Java学习笔记-Lombok与DTO.md
+测试计划与设计.md
+答辩常见问题.md
+项目介绍与代码说明.md

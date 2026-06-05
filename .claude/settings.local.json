@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 *)",
+      "Bash(find ~/.m2 -name \"lombok*.jar\" 2>/dev/null | head -5)",
+      "Read(//c/Users/xiaobin/.m2/**)"
+    ]
+  }
+}
