@@ -7,6 +7,7 @@ import com.mycity.dormitory.entity.Repair;
 import com.mycity.dormitory.mapper.CommentMapper;
 import com.mycity.dormitory.service.CommentService;
 import com.mycity.dormitory.service.RepairService;
+import com.mycity.dormitory.service.WebSocketPushService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class CommentServiceImpl
 
     private final CommentMapper commentMapper;
     private final RepairService repairService;
+    private final WebSocketPushService webSocketPushService;
 
     /** 添加评价，需要校验：报修单存在、归属当前用户、状态为已完成 */
     @Override
@@ -45,5 +47,8 @@ public class CommentServiceImpl
         comment.setContent(dto.getContent());
         comment.setCreateTime(LocalDateTime.now());
         commentMapper.insert(comment);
+
+        // 评价后通过 WebSocket 向处理该报修的管理员推送通知
+        webSocketPushService.pushNewComment(repair.getId(), repair.getAdminId());
     }
 }

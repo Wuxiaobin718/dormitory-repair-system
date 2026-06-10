@@ -40,6 +40,7 @@ import api from '@/api'
 export default {
   data() {
     return {
+      // repairId 从路由参数中获取，如 /repair/3/evaluate
       form: { repairId: Number(this.$route.params.id), score: 0, content: '' },
       loading: false,
       rules: {
@@ -57,7 +58,7 @@ export default {
           const res = await api.comment.add(this.form)
           if (res.code === 200) {
             this.$message.success('评价提交成功，感谢您的反馈！')
-            this.$router.push('/repair/my')
+            this.$router.push('/repair/my')  // 提交后返回我的报修列表
           }
         } finally {
           this.loading = false

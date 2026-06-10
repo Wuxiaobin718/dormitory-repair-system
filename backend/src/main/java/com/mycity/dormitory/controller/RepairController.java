@@ -8,12 +8,14 @@ import com.mycity.dormitory.dto.RepairUpdateDTO;
 import com.mycity.dormitory.entity.Repair;
 import com.mycity.dormitory.enums.RepairStatus;
 import com.mycity.dormitory.service.RepairService;
+import com.mycity.dormitory.service.WebSocketPushService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * 报修 Controller：学生提交/查看报修，管理员查看全部/更新状态
@@ -25,6 +27,7 @@ public class RepairController {
 
     private final RepairService repairService;
     private final HttpServletRequest request;
+    private final WebSocketPushService webSocketPushService;
 
     /** POST /api/repair/submit — 学生提交报修单 */
     @PostMapping("/submit")
@@ -34,37 +37,59 @@ public class RepairController {
         return Result.success();
     }
 
-    /** GET /api/repair/my — 学生查看自己的报修记录（分页） */
+    /** GET /api/repair/my — 学生查看自己的报修记录（分页，含学生/宿舍信息） */
     @GetMapping("/my")
     public Result<Page<Repair>> my(
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) Integer status) {
         Long userId = (Long) request.getAttribute("userId");
         Page<Repair> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<Repair> wrapper = new LambdaQueryWrapper<Repair>()
                 .eq(Repair::getUserId, userId)
                 .orderByDesc(Repair::getCreateTime);
-        return Result.success(repairService.page(pageParam, wrapper));
+        if (status != null) {
+            wrapper.eq(Repair::getStatus, status);
+        }
+        return Result.success(repairService.pageWithDetail(pageParam, wrapper, null));
     }
 
-    /** GET /api/repair/list — 管理员查看全部报修（可按状态筛选，分页） */
+    /** GET /api/repair/list — 管理员查看全部报修（含学生/宿舍信息，可搜索筛选） */
     @GetMapping("/list")
     public Result<Page<Repair>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) Integer status) {
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String studentName) {
+        // 仅管理员可查看全部报修
+        Integer role = (Integer) request.getAttribute("role");
+        if (role == null || role != 1) {
+            return Result.error("无权限：仅管理员可查看全部报修");
+        }
         Page<Repair> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<Repair> wrapper = new LambdaQueryWrapper<>();
         if (status != null) {
             wrapper.eq(Repair::getStatus, status);  // 按状态筛选
         }
         wrapper.orderByDesc(Repair::getCreateTime);
-        return Result.success(repairService.page(pageParam, wrapper));
+        return Result.success(repairService.pageWithDetail(pageParam, wrapper, studentName));
+    }
+
+    /** GET /api/repair/stats — 获取当前用户各状态报修数量（用于 Tabs 计数） */
+    @GetMapping("/stats")
+    public Result<Map<String, Long>> stats() {
+        Long userId = (Long) request.getAttribute("userId");
+        return Result.success(repairService.getStatusCounts(userId));
     }
 
     /** POST /api/repair/update — 管理员更新报修状态（接单→维修→完成） */
     @PostMapping("/update")
     public Result<Void> update(@Valid @RequestBody RepairUpdateDTO dto) {
+        // 仅管理员可操作状态变更
+        Integer role = (Integer) request.getAttribute("role");
+        if (role == null || role != 1) {
+            return Result.error("无权限：仅管理员可处理报修");
+        }
         // ① 查找报修单
         Repair repair = repairService.getById(dto.getId());
         if (repair == null) {
@@ -97,6 +122,9 @@ public class RepairController {
         }
 
         repairService.updateById(repair);
+
+        // 状态变更后通过 WebSocket 向学生推送实时通知
+        webSocketPushService.pushStatusUpdate(repair);
         return Result.success();
     }
 }

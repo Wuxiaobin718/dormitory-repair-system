@@ -1,6 +1,7 @@
 package com.mycity.dormitory.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -23,4 +24,26 @@ public class Repair {
     private Long adminId;           // 接单管理员ID
     private LocalDateTime createTime;   // 提交时间
     private LocalDateTime finishTime;   // 完成时间
+
+    // ====== 以下字段为联表查询填充，表中无对应列 ======
+
+    /** 报修学生姓名（关联 user 表） */
+    @TableField(exist = false)
+    private String studentName;
+
+    /** 报修学生手机号（关联 user 表） */
+    @TableField(exist = false)
+    private String studentPhone;
+
+    /** 宿舍楼栋（关联 dorm 表） */
+    @TableField(exist = false)
+    private String building;
+
+    /** 宿舍楼层（关联 dorm 表） */
+    @TableField(exist = false)
+    private Integer floor;
+
+    /** 宿舍房间号（关联 dorm 表） */
+    @TableField(exist = false)
+    private String room;
 }

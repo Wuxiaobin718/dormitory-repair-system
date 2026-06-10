@@ -123,12 +123,12 @@ import api from '@/api'
 export default {
   data() {
     return {
-      step: 0,
+      step: 0,                           // 步骤：0=填写信息，1=上传图片，2=确认提交
       form: { dormId: null, type: '', content: '', img: '' },
-      fileList: [],
-      dormList: [],
+      fileList: [],                       // 已上传的图片列表
+      dormList: [],                       // 宿舍下拉列表
       loading: false,
-      dialogVisible: false,
+      dialogVisible: false,              // 图片预览弹窗
       dialogImageUrl: '',
       rules: {
         dormId: [{ required: true, message: '请选择宿舍', trigger: 'change' }],
@@ -138,19 +138,22 @@ export default {
     }
   },
   computed: {
+    // 在确认步骤中展示已选宿舍的文字描述
     selectedDormText() {
       const d = this.dormList.find(d => d.id === this.form.dormId)
       return d ? `${d.building} ${d.floor}楼 ${d.room}室` : ''
     }
   },
   mounted() {
-    this.loadDorms()
+    this.loadDorms()  // 初始化宿舍列表
   },
   methods: {
+    // 加载宿舍列表供用户选择
     async loadDorms() {
       const res = await api.dorm.getList()
       if (res.code === 200) this.dormList = res.data
     },
+    // 自定义上传：调用上传接口，拿到图片 URL
     async handleUpload(file) {
       const res = await api.upload.uploadImage(file.file)
       if (res.code === 200) {
@@ -164,8 +167,9 @@ export default {
       this.dialogVisible = true
     },
     handleRemove() {
-      this.form.img = ''
+      this.form.img = ''  // 移除图片时清空
     },
+    // 最终提交报修单
     handleSubmit() {
       this.$refs.formRef.validate(async valid => {
         if (!valid) return

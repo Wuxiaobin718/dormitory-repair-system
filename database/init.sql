@@ -55,7 +55,22 @@ CREATE TABLE IF NOT EXISTS `comment` (
     KEY `idx_repair_id` (`repair_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评价表';
 
--- 5. 示例数据：宿舍楼栋
+-- 5. 通知表
+CREATE TABLE IF NOT EXISTS `notification` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id` BIGINT NOT NULL COMMENT '接收通知的用户ID',
+    `type` VARCHAR(30) NOT NULL COMMENT '通知类型：STATUS_UPDATE/NEW_REPAIR/NEW_COMMENT',
+    `title` VARCHAR(100) NOT NULL COMMENT '通知标题',
+    `message` VARCHAR(500) DEFAULT NULL COMMENT '通知内容',
+    `repair_id` BIGINT DEFAULT NULL COMMENT '关联报修单ID',
+    `is_read` TINYINT NOT NULL DEFAULT 0 COMMENT '是否已读：0=未读 1=已读',
+    `create_time` DATETIME DEFAULT NULL COMMENT '通知时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_user_read` (`user_id`, `is_read`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通知表';
+
+-- 6. 示例数据：宿舍楼栋
 INSERT INTO `dorm` (`building`, `floor`, `room`) VALUES
 ('1栋', 1, '101'), ('1栋', 1, '102'), ('1栋', 1, '103'),
 ('1栋', 2, '201'), ('1栋', 2, '202'),

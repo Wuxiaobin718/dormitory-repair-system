@@ -72,6 +72,7 @@ import api from '@/api'
 export default {
   data() {
     return {
+      // 功能卡片数据
       features: [
         { icon: 'el-icon-circle-plus-outline', title: '在线报修', desc: '填写故障信息，上传图片，一键提交报修申请',
           bg: 'linear-gradient(135deg, #409EFF, #66B1FF)' },
@@ -80,6 +81,7 @@ export default {
         { icon: 'el-icon-star-on', title: '服务评价', desc: '维修完成后对服务进行评分和反馈，持续提升质量',
           bg: 'linear-gradient(135deg, #67C23A, #95D97E)' },
       ],
+      // 快捷统计数据（登录后显示）
       stats: [
         { icon: 'el-icon-document-copy', label: '总报修数', value: 0,
           bg: 'linear-gradient(135deg, #409EFF, #66B1FF)' },
@@ -95,20 +97,32 @@ export default {
     isAdmin() { return this.$store.getters['user/isAdmin'] }
   },
   mounted() {
-    if (this.token) this.loadStats()
+    if (this.token) this.loadStats()  // 登录后加载统计数据
   },
   methods: {
+    // 加载统计数据：管理员看全局，学生看自己的
     async loadStats() {
       try {
-        const [all, pending, completed] = await Promise.all([
-          api.repair.getRepairList({ page: 1, size: 1 }),
-          api.repair.getRepairList({ page: 1, size: 1, status: 0 }),
-          api.repair.getRepairList({ page: 1, size: 1, status: 2 }),
-        ])
-        this.stats[0].value = all.data?.total || 0
-        this.stats[1].value = pending.data?.total || 0
-        this.stats[2].value = completed.data?.total || 0
-      } catch {}
+        if (this.isAdmin) {
+          // 管理员：并行请求各状态的全局报修数量
+          const [all, pending, completed] = await Promise.all([
+            api.repair.getRepairList({ page: 1, size: 1 }),
+            api.repair.getRepairList({ page: 1, size: 1, status: 0 }),
+            api.repair.getRepairList({ page: 1, size: 1, status: 2 }),
+          ])
+          this.stats[0].value = all.data?.total || 0
+          this.stats[1].value = pending.data?.total || 0
+          this.stats[2].value = completed.data?.total || 0
+        } else {
+          // 学生：获取个人各状态报修数量
+          const res = await api.repair.getStats()
+          if (res.code === 200) {
+            this.stats[0].value = res.data.total || 0
+            this.stats[1].value = res.data.pending || 0
+            this.stats[2].value = res.data.completed || 0
+          }
+        }
+      } catch {}  // 静默处理，不阻塞页面
     }
   }
 }

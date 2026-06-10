@@ -37,12 +37,26 @@
             <i class="el-icon-s-home"></i>
           </div>
           <div class="dorm-stat-info">
-            <div class="dorm-stat-number">{{ allData.length }}</div>
-            <div class="dorm-stat-label">总房间数</div>
+            <div class="dorm-stat-number">{{ filteredData.length }}</div>
+            <div class="dorm-stat-label">{{ filterBuilding ? filterBuilding + ' 房间数' : '总房间数' }}</div>
           </div>
         </div>
       </el-col>
     </el-row>
+
+    <!-- Filter bar -->
+    <div class="filter-card">
+      <el-form :inline="true" class="filter-form">
+        <el-form-item label="楼栋筛选">
+          <el-select v-model="filterBuilding" placeholder="全部楼栋" clearable @change="handleFilterChange" size="medium" style="width:180px">
+            <el-option v-for="b in buildings" :key="b" :label="b" :value="b" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button size="medium" @click="resetFilter" v-if="filterBuilding">清除筛选</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
 
     <!-- Table -->
     <div class="table-card">
@@ -65,9 +79,9 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrap" v-if="allData.length > pageSize">
+      <div class="pagination-wrap" v-if="filteredData.length > pageSize">
         <el-pagination
-          :current-page="page" :page-size="pageSize" :total="allData.length"
+          :current-page="page" :page-size="pageSize" :total="filteredData.length"
           layout="total, prev, pager, next"
           @current-change="handlePageChange" />
       </div>
@@ -101,24 +115,39 @@ import api from '@/api'
 export default {
   data() {
     return {
-      allData: [], page: 1, pageSize: 10, loading: false, dialogVisible: false,
-      form: { building: '', floor: 1, room: '' }
+      allData: [], page: 1, pageSize: 10, loading: false,
+      dialogVisible: false,  // 添加宿舍弹窗
+      form: { building: '', floor: 1, room: '' },
+      filterBuilding: ''     // 当前筛选的楼栋
     }
   },
   computed: {
+    // 按楼栋筛选后的数据
+    filteredData() {
+      if (!this.filterBuilding) return this.allData
+      return this.allData.filter(i => i.building === this.filterBuilding)
+    },
+    // 当前页的数据（前端分页）
     pageData() {
       const start = (this.page - 1) * this.pageSize
-      return this.allData.slice(start, start + this.pageSize)
+      return this.filteredData.slice(start, start + this.pageSize)
     },
+    // 去重后的楼栋列表（用于筛选下拉）
+    buildings() {
+      return [...new Set(this.allData.map(i => i.building))].sort()
+    },
+    // 统计：去重后的楼栋数（全局）
     buildingCount() {
       return new Set(this.allData.map(i => i.building)).size
     },
+    // 统计：去重后的楼层数（按当前筛选范围）
     floorCount() {
-      return new Set(this.allData.map(i => i.floor)).size
+      return new Set(this.filteredData.map(i => i.floor)).size
     }
   },
   mounted() { this.loadData() },
   methods: {
+    // 加载全部宿舍数据
     async loadData() {
       this.loading = true
       try {
@@ -129,11 +158,22 @@ export default {
     handlePageChange(p) {
       this.page = p
     },
+    // 切换楼栋筛选时回到第一页
+    handleFilterChange() {
+      this.page = 1
+    },
+    // 清除筛选
+    resetFilter() {
+      this.filterBuilding = ''
+      this.page = 1
+    },
+    // 弹出添加宿舍对话框（重置表单）
     showAddDialog() {
       this.form = { building: '', floor: 1, room: '' }
       this.$nextTick(() => { if (this.$refs.formRef) this.$refs.formRef.clearValidate() })
       this.dialogVisible = true
     },
+    // 确认添加宿舍
     async handleAdd() {
       try {
         await this.$refs.formRef.validate()
@@ -141,7 +181,7 @@ export default {
         if (res.code === 200) {
           this.$message.success('宿舍添加成功')
           this.dialogVisible = false
-          this.loadData()
+          this.loadData()  // 刷新列表
         }
       } catch {}
     }
@@ -211,4 +251,14 @@ export default {
   display: flex;
   justify-content: center;
 }
+
+/* Filter card */
+.filter-card {
+  background: #fff;
+  border-radius: var(--r-lg);
+  padding: 12px 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-card);
+}
+.filter-form .el-form-item { margin-bottom: 0; }
 </style>

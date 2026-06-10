@@ -102,17 +102,19 @@ import api from '@/api'
 export default {
   data() {
     return {
+      // 各状态报修数量
       stats: { total: 0, pending: 0, inProgress: 0, completed: 0 }
     }
   },
   computed: {
-    total() { return this.stats.total || 1 },
+    total() { return this.stats.total || 1 },  // 避免除以 0
     pendingPercent() { return (this.stats.pending / this.total * 100).toFixed(1) },
     progressPercent() { return (this.stats.inProgress / this.total * 100).toFixed(1) },
     completedPercent() { return (this.stats.completed / this.total * 100).toFixed(1) }
   },
   mounted() { this.loadStats() },
   methods: {
+    // 并行请求各状态的报修数量
     async loadStats() {
       try {
         const [all, pending, progress, completed] = await Promise.all([
@@ -125,7 +127,7 @@ export default {
         this.stats.pending = pending.data?.total || 0
         this.stats.inProgress = progress.data?.total || 0
         this.stats.completed = completed.data?.total || 0
-      } catch {}
+      } catch {}  // 静默处理
     }
   }
 }

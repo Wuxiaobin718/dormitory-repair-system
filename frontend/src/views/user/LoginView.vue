@@ -57,7 +57,7 @@ import api from '@/api'
 export default {
   data() {
     return {
-      isRegister: this.$route.path === '/register',
+      isRegister: this.$route.path === '/register',  // 根据路径判断是登录还是注册
       loading: false,
       form: { username: '', password: '', confirmPassword: '', name: '', phone: '' },
       rules: {
@@ -70,15 +70,18 @@ export default {
   },
   methods: {
     toggleMode() {
+      // 登录/注册模式切换
       this.isRegister = !this.isRegister
       this.$router.replace(this.isRegister ? '/register' : '/login')
     },
     handleSubmit() {
+      // 表单校验通过后才提交
       this.$refs.formRef.validate(async valid => {
         if (!valid) return
         this.loading = true
         try {
           if (this.isRegister) {
+            // 注册：校验两次密码一致 → 调注册接口 → 切换到登录页
             if (this.form.password !== this.form.confirmPassword) {
               this.$message.error('两次输入的密码不一致')
               this.loading = false
@@ -93,12 +96,13 @@ export default {
               this.form.confirmPassword = ''
             }
           } else {
+            // 登录：调登录接口 → Vuex 存 token → 跳转首页（或来源页）
             await this.$store.dispatch('user/login', {
               username: this.form.username,
               password: this.form.password
             })
             this.$message.success('登录成功')
-            const redirect = this.$route.query.redirect || '/'
+            const redirect = this.$route.query.redirect || '/'  // 登录前访问的页面
             this.$router.push(redirect)
           }
         } finally {

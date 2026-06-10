@@ -1,4 +1,5 @@
 <template>
+  <!-- 404 页面：路由匹配不到时显示 -->
   <div class="not-found-page">
     <div class="not-found-content">
       <div class="not-found-code">404</div>

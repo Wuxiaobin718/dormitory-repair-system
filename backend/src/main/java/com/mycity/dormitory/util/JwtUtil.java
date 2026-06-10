@@ -22,14 +22,15 @@ public class JwtUtil {
 
     private final JwtProperties jwtProperties;
 
-    /** 生成 JWT token，包含 userId 和 username，过期时间从配置读取 */
-    public String generateToken(Long userId, String username) {
+    /** 生成 JWT token，包含 userId、username 和 role，过期时间从配置读取 */
+    public String generateToken(Long userId, String username, Integer role) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + jwtProperties.getExpiration() * 60 * 60 * 1000);
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("username", username);
+        claims.put("role", role);
 
         SecretKey key = Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
 
@@ -40,6 +41,11 @@ public class JwtUtil {
                 .setExpiration(expiration) // 过期时间
                 .signWith(key, SignatureAlgorithm.HS256)  // HS256 签名
                 .compact();
+    }
+
+    /** 从 token 中提取角色 */
+    public Integer getRole(String token) {
+        return (Integer) parseToken(token).get("role");
     }
 
     /** 解析 token，返回 Claims（包含所有声明信息） */

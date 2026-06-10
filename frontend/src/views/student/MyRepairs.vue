@@ -10,10 +10,18 @@
     <!-- Filter tabs -->
     <div class="filter-bar">
       <el-tabs v-model="activeTab" @tab-click="handleTabChange">
-        <el-tab-pane label="全部" name="all"></el-tab-pane>
-        <el-tab-pane label="待处理" name="0"></el-tab-pane>
-        <el-tab-pane label="维修中" name="1"></el-tab-pane>
-        <el-tab-pane label="已完成" name="2"></el-tab-pane>
+        <el-tab-pane name="all">
+          <span slot="label">全部 <el-tag size="mini" type="info" class="tab-badge">{{ stats.total }}</el-tag></span>
+        </el-tab-pane>
+        <el-tab-pane name="0">
+          <span slot="label">待处理 <el-tag size="mini" type="warning" class="tab-badge">{{ stats.pending }}</el-tag></span>
+        </el-tab-pane>
+        <el-tab-pane name="1">
+          <span slot="label">维修中 <el-tag size="mini" type="primary" class="tab-badge">{{ stats.inProgress }}</el-tag></span>
+        </el-tab-pane>
+        <el-tab-pane name="2">
+          <span slot="label">已完成 <el-tag size="mini" type="success" class="tab-badge">{{ stats.completed }}</el-tag></span>
+        </el-tab-pane>
       </el-tabs>
     </div>
 
@@ -44,6 +52,10 @@
               <i class="el-icon-time"></i>
               {{ item.createTime }}
             </div>
+            <div class="repair-dorm" v-if="item.building">
+              <i class="el-icon-s-home"></i>
+              {{ item.building }} {{ item.floor }}楼 {{ item.room }}室
+            </div>
           </div>
         </div>
         <div class="repair-card-actions" v-if="item.status === 2">
@@ -66,18 +78,33 @@
 
 <script>
 import api from '@/api'
+import ws from '@/utils/websocket'
 
 export default {
   data() {
     return {
       list: [], page: 1, size: 10, total: 0, loading: false,
-      activeTab: 'all'
+      activeTab: 'all',  // 当前筛选状态：all=全部, 0=待处理, 1=维修中, 2=已完成
+      stats: { total: 0, pending: 0, inProgress: 0, completed: 0 },
+      wsHandler: null    // WebSocket 监听器引用
     }
   },
   mounted() {
     this.loadData()
+    this.loadStats()
+    // 监听报修状态变更通知，自动刷新列表
+    this.wsHandler = (data) => {
+      console.log('[MyRepairs] 收到 STATUS_UPDATE，刷新列表')
+      this.loadData(this.page)
+      this.loadStats()
+    }
+    ws.on('STATUS_UPDATE', this.wsHandler)
+  },
+  beforeDestroy() {
+    if (this.wsHandler) ws.off('STATUS_UPDATE', this.wsHandler)
   },
   methods: {
+    // 加载报修列表（分页）
     async loadData(p = 1) {
       this.page = p
       this.loading = true
@@ -93,11 +120,20 @@ export default {
         this.loading = false
       }
     },
+    // 加载各状态报修数量（Tabs 徽标）
+    async loadStats() {
+      try {
+        const res = await api.repair.getStats()
+        if (res.code === 200) this.stats = res.data
+      } catch {}
+    },
+    // 切换筛选 Tab 时重新加载数据
     handleTabChange() {
       this.loadData()
     },
+    // 状态对应的 Element UI Tag 类型
     statusType(status) {
-      return ['warning', 'primary', 'success'][status]
+      return ['warning', 'primary', 'success'][status]  // 待处理=黄色, 维修中=蓝色, 已完成=绿色
     },
     statusText(status) {
       return ['待处理', '维修中', '已完成'][status]
@@ -144,6 +180,7 @@ export default {
 .filter-bar .el-tabs__item.is-active {
   color: var(--c-primary);
 }
+.tab-badge { margin-left: 4px; font-weight: 700; border-radius: 10px; }
 
 /* Repair cards */
 .repair-list {
@@ -207,13 +244,14 @@ export default {
   display: flex;
   gap: 20px;
 }
-.repair-time {
+.repair-time, .repair-dorm {
   font-size: 13px;
   color: var(--c-text-muted);
   display: flex;
   align-items: center;
   gap: 4px;
 }
+.repair-dorm i { color: var(--c-primary); }
 
 .repair-card-actions {
   padding: 12px 24px;
